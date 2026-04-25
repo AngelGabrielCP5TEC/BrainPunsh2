@@ -42,8 +42,8 @@ public class SwivelComponent : MonoBehaviour
 
         // Horizontal inverted, vertical proportional, corrected for facing direction
         AimWorld = new Vector2(
-            -Swivel01.x * _aimScaleX * _facingSign,
-             Swivel01.y * _aimScaleY
+            Swivel01.x * _aimScaleX * _facingSign,
+            -Swivel01.y * _aimScaleY
         );
     }
 }
