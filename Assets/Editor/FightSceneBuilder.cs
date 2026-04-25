@@ -121,6 +121,7 @@ public static class FightSceneBuilder
         var swivel = root.AddComponent<SwivelComponent>();
         var fc     = root.AddComponent<FighterController>();
         root.AddComponent<GloveAnimator>();  // auto-finds GloveL/GloveR under BodyPivot
+        root.AddComponent<HitReaction>();    // auto-finds BodyPivot + child Renderers
 
         SetField(swivel, "_bodyPivot",   pivot.transform);
         SetField(swivel, "_facingSign",  facingSign);
@@ -132,7 +133,10 @@ public static class FightSceneBuilder
         if (isPlayer)
             root.AddComponent<KeyboardFighterInput>();
         else
+        {
             root.AddComponent<BotFighterInput>();
+            root.AddComponent<BotOrbitMotion>();  // orbit sway + face-player
+        }
 
         return root;
     }
