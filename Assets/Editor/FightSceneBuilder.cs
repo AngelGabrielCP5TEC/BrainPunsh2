@@ -131,7 +131,7 @@ public static class FightSceneBuilder
 
         // Input
         if (isPlayer)
-            root.AddComponent<KeyboardFighterInput>();
+            root.AddComponent<PlayerFighterInput>();  // mode switch: Keyboard ↔ Socket (F2)
         else
         {
             root.AddComponent<BotFighterInput>();
