@@ -1,9 +1,12 @@
 public enum GameState
 {
     MainMenu,
+    Settings,
     RoundIntro,
     Fighting,
     Paused,
     RoundEnd,
-    MatchEnd
+    MatchEnd,
+    Win,
+    Lose
 }
