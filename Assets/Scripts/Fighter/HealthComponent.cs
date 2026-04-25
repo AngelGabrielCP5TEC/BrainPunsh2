@@ -10,6 +10,7 @@ public class HealthComponent : MonoBehaviour
     public bool IsKO => CurrentHP <= 0f;
 
     public event System.Action<float, float> OnHealthChanged;  // current, max
+    public event System.Action<float> OnDamaged;               // damage amount (>0 only)
     public event System.Action OnKO;
 
     void Awake() => CurrentHP = _maxHP;
@@ -22,9 +23,10 @@ public class HealthComponent : MonoBehaviour
 
     public void ApplyDamage(float amount)
     {
-        if (IsKO) return;
+        if (IsKO || amount <= 0f) return;
         CurrentHP = Mathf.Max(0f, CurrentHP - amount);
         OnHealthChanged?.Invoke(CurrentHP, _maxHP);
+        OnDamaged?.Invoke(amount);
         if (IsKO) OnKO?.Invoke();
     }
 }

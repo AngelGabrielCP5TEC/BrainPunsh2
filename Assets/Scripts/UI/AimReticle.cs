@@ -19,6 +19,8 @@ public class AimReticle : MonoBehaviour
     [SerializeField] private bool _autoCreateVisual = true;
 
     private Renderer _visualRenderer;
+    private BotOrbitMotion _orbitCache;
+    private bool _orbitChecked;
 
     void OnEnable()
     {
@@ -47,8 +49,18 @@ public class AimReticle : MonoBehaviour
     {
         if (_swivelSource == null || _target == null) return;
 
+        if (!_orbitChecked && Application.isPlaying)
+        {
+            _orbitCache = _target.GetComponent<BotOrbitMotion>();
+            _orbitChecked = true;
+        }
+
+        // Anchor at the bot's fixed orbit anchor (so the reticle stays still
+        // while the bot sways through it) — fall back to its transform.
+        Vector3 origin = (_orbitCache != null) ? _orbitCache.Anchor : _target.position;
+
         Vector2 aim = _swivelSource.AimWorld;
-        transform.position = _target.position + _targetOffset
+        transform.position = origin + _targetOffset
                            + Vector3.right * aim.x * _aimScale
                            + Vector3.up    * aim.y * _aimScale;
     }
