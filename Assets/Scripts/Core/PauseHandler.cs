@@ -8,6 +8,12 @@ public class PauseHandler : MonoBehaviour
     void Update()
     {
         if (Input.GetKeyDown(_pauseKey))
-            _roundManager?.TogglePause();
+        {
+            if (GameManager.Instance.CurrentState == GameState.Fighting ||
+                GameManager.Instance.CurrentState == GameState.Paused)
+            {
+                _roundManager?.TogglePause();
+            }
+        }
     }
 }
