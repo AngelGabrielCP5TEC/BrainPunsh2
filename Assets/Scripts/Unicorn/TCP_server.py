@@ -9,8 +9,7 @@ SEND_RATE_HZ = 25 #1 paquete cada 40ms, hay que ver si lo adaptamos a más o men
 
 #Variables compartidas con los otros scripts
 vector = [0.0, 0.0] #vector para x e y
-
-concentracion = 0.0
+state_vector = [0]
 
 #servidor TCP (transmission control protocol)
 def run(): #corremos el servidor en un hilo aparte para no bloquear el resto del programa, y así poder actualizar los valores de x, y y concentración en tiempo real
@@ -35,14 +34,14 @@ def run(): #corremos el servidor en un hilo aparte para no bloquear el resto del
     try: 
         while True:
             #formateamos el mensaje con los valores actuales de x, y y concentración
-            message = f"{x:.2f},{y:.2f},{concentracion:.2f}\n"
+            message = f"{x:.2f},{y:.2f},{state_vector:.2f}\n"
             conn.sendall(message.encode("utf-8")) #enviamos el mensaje al cliente (Unity) como bytes UTF-8 (8 bit Unicode Tranformation Format)
 
             print(f"[TCP] enviado: {message.strip()}")
             time.sleep(sleep_time) #esperamos antes de enviar el siguiente paquete
 
     except (BrokenPipeError, ConnectionResetError):
-                print("[TCP] valió madres la conexión gracias bai.")
+                print("[TCP] conexión estupida qlera pendeja.")
             
     except KeyboardInterrupt:
             print("[TCP] servidor detenido por el usuario.")
