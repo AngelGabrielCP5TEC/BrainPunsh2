@@ -6,20 +6,25 @@ using UnityEngine;
 
 public class SocketReceiver : MonoBehaviour
 {
-    TcpClient client;
-    NetworkStream stream;
-    Thread receiveThread;
+    private TcpClient client;
+    private NetworkStream stream;
+    private Thread receiveThread;
 
-    volatile bool isRunning=false;
+    private volatile bool isRunning = false;
 
-    readonly object dataLock = new object();
+    private readonly object dataLock = new object();
 
+    // Datos recibidos
     public Vector2 Cursor { get; private set; } = Vector2.zero;
     public int State { get; private set; } = 0;
+    public int Imaginary { get; private set; } = 0;
 
     void Start()
     {
-        ConnectToServer("127.0.0.1",12345);
+        ConnectToServer(
+            "127.0.0.1",
+            12345
+        );
     }
 
     void OnApplicationQuit()
@@ -27,90 +32,101 @@ public class SocketReceiver : MonoBehaviour
         StopConnection();
     }
 
-    void ConnectToServer(string host,int port)
+    void ConnectToServer(
+        string host,
+        int port
+    )
     {
         try
         {
-            client = new TcpClient(host,port);
+            client = new TcpClient(
+                host,
+                port
+            );
+
             stream = client.GetStream();
 
-            isRunning=true;
+            isRunning = true;
 
-            receiveThread = new Thread(ReceiveData);
-            receiveThread.IsBackground=true;
+            receiveThread =
+                new Thread(ReceiveData);
+
+            receiveThread.IsBackground = true;
+
             receiveThread.Start();
 
-            Debug.Log("Conectado.");
+            Debug.Log(
+                "TCP conectado."
+            );
         }
 
         catch(Exception e)
         {
-            Debug.LogError(e.Message);
+            Debug.LogError(
+                e.Message
+            );
         }
     }
-
     void ReceiveData()
     {
         byte[] buffer = new byte[1024];
 
-        string leftover="";
+        string leftover = "";
 
         while(isRunning)
         {
             try
             {
-                if(stream!=null && stream.DataAvailable)
+                int bytesRead =
+                    stream.Read(
+                        buffer,
+                        0,
+                        buffer.Length
+                    );
+
+                if(bytesRead <= 0)
+                    continue;
+
+                string incoming =
+                    Encoding.UTF8.GetString(
+                        buffer,
+                        0,
+                        bytesRead
+                    );
+
+                leftover += incoming;
+
+                int newlineIndex;
+
+                while(
+                    (newlineIndex =
+                    leftover.IndexOf('\n')) >= 0
+                )
                 {
-                    int bytesRead=
-                        stream.Read(
-                           buffer,
-                           0,
-                           buffer.Length
+                    string line =
+                        leftover.Substring(
+                            0,
+                            newlineIndex
+                        ).Trim();
+
+                    leftover =
+                        leftover.Substring(
+                            newlineIndex + 1
                         );
 
-                    if(bytesRead>0)
+                    if(line.Length > 0)
                     {
-                        string incoming=
-                            Encoding.UTF8.GetString(
-                               buffer,
-                               0,
-                               bytesRead
-                            );
-
-                        leftover+=incoming;
-
-                        int newlineIndex;
-
-                        while(
-                           (newlineIndex=
-                           leftover.IndexOf('\n'))>=0
-                        )
-                        {
-                            string line=
-                              leftover.Substring(
-                                0,
-                                newlineIndex
-                              ).Trim();
-
-                            leftover=
-                              leftover.Substring(
-                                newlineIndex+1
-                              );
-
-                            if(line.Length>0)
-                            {
-                                ParseData(line);
-                            }
-                        }
+                        ParseData(line);
                     }
                 }
-
-                Thread.Sleep(10);
             }
 
             catch(Exception e)
             {
-                Debug.LogError(e.Message);
+                Debug.LogError(
+                    e.Message
+                );
+
                 StopConnection();
                 break;
             }
@@ -119,63 +135,123 @@ public class SocketReceiver : MonoBehaviour
 
     void ParseData(string line)
     {
-        string[] parts=line.Split(',');
+        string[] parts =
+            line.Split(',');
 
-        if(parts.Length==3 &&
-           float.TryParse(parts[0],
-             System.Globalization.NumberStyles.Float,
-             System.Globalization.CultureInfo.InvariantCulture,
-             out float x)
+        if(
+            parts.Length == 4
 
-           &&
+            &&
 
-           float.TryParse(parts[1],
-             System.Globalization.NumberStyles.Float,
-             System.Globalization.CultureInfo.InvariantCulture,
-             out float y)
+            float.TryParse(
+                parts[0],
+                System.Globalization.
+                NumberStyles.Float,
 
-           &&
+                System.Globalization.
+                CultureInfo.InvariantCulture,
 
-           int.TryParse(
-             parts[2],
-             out int state))
+                out float x
+            )
+
+            &&
+
+            float.TryParse(
+                parts[1],
+                System.Globalization.
+                NumberStyles.Float,
+
+                System.Globalization.
+                CultureInfo.InvariantCulture,
+
+                out float y
+            )
+
+            &&
+
+            int.TryParse(
+                parts[2],
+                out int state
+            )
+
+            &&
+
+            int.TryParse(
+                parts[3],
+                out int imag
+            )
+        )
         {
             lock(dataLock)
             {
-                Cursor = new Vector2(x,y);
+                Cursor =
+                    new Vector2(
+                        x,
+                        y
+                    );
+
                 State = state;
+                Imaginary = imag;
             }
+
+            Debug.Log(
+              $"X:{x} Y:{y} State:{state} MI:{imag}"
+            );
         }
+
         else
         {
-            Debug.LogWarning("Formato incorrecto: "+line);
+            Debug.LogWarning(
+                "Formato incorrecto: "
+                + line
+            );
         }
     }
 
     void StopConnection()
     {
-        isRunning=false;
+        isRunning = false;
 
-        if(receiveThread!=null &&
-           receiveThread.IsAlive)
+        if(
+            receiveThread != null &&
+            receiveThread.IsAlive
+        )
         {
             receiveThread.Join(500);
         }
 
-        try{stream?.Close();} catch{}
-        try{client?.Close();} catch{}
+        try
+        {
+            stream?.Close();
+        }
+        catch{}
 
-        Debug.Log("Conexión cerrada");
+        try
+        {
+            client?.Close();
+        }
+        catch{}
+
+        Debug.Log(
+            "Conexión cerrada."
+        );
     }
 
-    public (float,float,int) GetReceiverData()
+    public (
+        float,
+        float,
+        int,
+        int
+    ) GetReceiverData()
     {
         lock(dataLock)
         {
-            return(
+            return
+            (
                 Cursor.x,
                 Cursor.y,
-                State
+                State,
+                Imaginary
             );
         }
     }
