@@ -4,10 +4,11 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [SerializeField] private GameState _startingState = GameState.RoundIntro;
+    [SerializeField] private GameState _startingState = GameState.MainMenu;
 
     public GameState CurrentState { get; private set; }
     public bool IsFighting => CurrentState == GameState.Fighting;
+    public bool IsPaused => CurrentState == GameState.Paused;
 
     public event System.Action<GameState> OnStateChanged;
 
@@ -21,6 +22,7 @@ public class GameManager : MonoBehaviour
 
     public void ChangeState(GameState next)
     {
+        if (CurrentState == next) return;
         CurrentState = next;
         OnStateChanged?.Invoke(next);
     }

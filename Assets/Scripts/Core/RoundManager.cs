@@ -57,6 +57,19 @@ public class RoundManager : MonoBehaviour
         {
             OnMatchEnd?.Invoke(PlayerWins > BotWins);
             GameManager.Instance.ChangeState(GameState.MatchEnd);
+
+            // Cargar escena de Win o Lose con transición
+            Time.timeScale = 1f; // Asegurar que el tiempo está corriendo
+            if (PlayerWins > BotWins)
+            {
+                Debug.Log("[RoundManager] Player won! Loading Win scene...");
+                SceneTransitionManager.Instance.TransitionToScene("Win");
+            }
+            else
+            {
+                Debug.Log("[RoundManager] Player lost! Loading Lose scene...");
+                SceneTransitionManager.Instance.TransitionToScene("Lose");
+            }
         }
         else
         {
