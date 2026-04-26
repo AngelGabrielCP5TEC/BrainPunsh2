@@ -27,6 +27,10 @@ public class HealthComponent : MonoBehaviour
         CurrentHP = Mathf.Max(0f, CurrentHP - amount);
         OnHealthChanged?.Invoke(CurrentHP, _maxHP);
         OnDamaged?.Invoke(amount);
-        if (IsKO) OnKO?.Invoke();
+        if (IsKO)
+        {
+            OnKO?.Invoke();
+            AudioManager.Instance?.PlayRoundEndBell();
+        }
     }
 }

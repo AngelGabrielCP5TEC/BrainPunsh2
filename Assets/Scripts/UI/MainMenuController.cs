@@ -23,12 +23,16 @@ public class MainMenuController : MonoBehaviour
 
         if (_settingsPanel != null)
             _settingsPanel.SetActive(false);
+
+        // Kick the menu music (no-op if AudioManager already handled it via scene-load hook)
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayMenuMusic();
     }
 
     private void OnPlayClicked()
     {
         Debug.Log("[MainMenu] Loading Ring scene...");
-        SceneTransitionManager.Instance.TransitionToScene("Ring");
+        if (AudioManager.Instance != null) AudioManager.Instance.StopMusic();
+        SceneTransitionManager.Instance.TransitionToScene("RING");
     }
 
     private void OnSettingsClicked()

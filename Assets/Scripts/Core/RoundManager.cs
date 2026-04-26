@@ -38,6 +38,7 @@ public class RoundManager : MonoBehaviour
         _player.ResetForRound();
         _bot.ResetForRound();
         OnRoundStart?.Invoke(CurrentRound);
+        AudioManager.Instance?.PlayRoundStart();
         yield return new WaitForSeconds(_roundIntroDelay);
         GameManager.Instance.ChangeState(GameState.Fighting);
     }
@@ -55,20 +56,24 @@ public class RoundManager : MonoBehaviour
         bool matchOver = PlayerWins >= winsNeeded || BotWins >= winsNeeded || CurrentRound >= _totalRounds;
         if (matchOver)
         {
-            OnMatchEnd?.Invoke(PlayerWins > BotWins);
+            bool playerWonMatch = PlayerWins > BotWins;
+            OnMatchEnd?.Invoke(playerWonMatch);
             GameManager.Instance.ChangeState(GameState.MatchEnd);
+            Time.timeScale = 1f;
 
-            // Cargar escena de Win o Lose con transición
-            Time.timeScale = 1f; // Asegurar que el tiempo está corriendo
-            if (PlayerWins > BotWins)
+            // Prefer in-scene overlay (image + audio + R-to-MainMenu)
+            var overlay = FindObjectOfType<MatchEndOverlay>();
+            if (overlay != null)
             {
-                Debug.Log("[RoundManager] Player won! Loading Win scene...");
-                SceneTransitionManager.Instance.TransitionToScene("Win");
+                Debug.Log($"[RoundManager] Match over — {(playerWonMatch ? "WIN" : "LOSE")} overlay");
+                if (playerWonMatch) overlay.ShowWin();
+                else                 overlay.ShowLose();
             }
             else
             {
-                Debug.Log("[RoundManager] Player lost! Loading Lose scene...");
-                SceneTransitionManager.Instance.TransitionToScene("Lose");
+                // Fallback: legacy scene-transition path
+                Debug.LogWarning("[RoundManager] No MatchEndOverlay found — falling back to scene transition.");
+                SceneTransitionManager.Instance.TransitionToScene(playerWonMatch ? "Win" : "Lose");
             }
         }
         else

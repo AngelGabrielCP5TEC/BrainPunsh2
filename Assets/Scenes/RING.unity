@@ -347,6 +347,59 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 74322100}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &77219563
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 77219565}
+  - component: {fileID: 77219564}
+  m_Layer: 0
+  m_Name: MatchEndOverlay
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &77219564
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 77219563}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b66f3ff43a63da44bae11919659fa9c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MatchEndOverlay
+  _winSprite: {fileID: 21300000, guid: 9d82c73f37e013d4ab679ee5e4dd43c9, type: 3}
+  _loseSprite: {fileID: 21300000, guid: 4e4254fa60d7ab64eb04b5db2638f02f, type: 3}
+  _caption: Press R to retry
+  _captionFontSize: 56
+  _captionColor: {r: 1, g: 1, b: 1, a: 1}
+  _retryKey: 114
+  _mainMenuScene: MainMenu
+  _backgroundDim: 0.8
+  _preserveAspect: 1
+--- !u!4 &77219565
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 77219563}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &128044746
 GameObject:
   m_ObjectHideFlags: 0
@@ -5597,6 +5650,59 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 98bed67b2244485478da85d1b0475066, type: 3}
   m_PrefabInstance: {fileID: 1524358000}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1912495805
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1912495807}
+  - component: {fileID: 1912495806}
+  m_Layer: 0
+  m_Name: AudioManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1912495806
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1912495805}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6519912a59d2a8942b2e525718f021a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioManager
+  _menuMusic: {fileID: 8300000, guid: d34242d28da21bd4f8320350cad288ab, type: 3}
+  _ringMusic: {fileID: 8300000, guid: 0b08d2b5409b09c44a37693618bf2e74, type: 3}
+  _winMusic: {fileID: 8300000, guid: e3ba6a46a2f25fd45a563a6a6dbf351f, type: 3}
+  _loseMusic: {fileID: 8300000, guid: 3a6df552f09f89745b8c2ce88f2b85e6, type: 3}
+  _musicVolume: 0.6
+  _matchEndDuckVol: 0
+  _defaultFadeDuration: 1
+  _menuSceneName: MainMenu
+  _ringSceneName: RING
+--- !u!4 &1912495807
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1912495805}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1939425402
 GameObject:
   m_ObjectHideFlags: 0
@@ -6143,3 +6249,5 @@ SceneRoots:
   - {fileID: 1385945890}
   - {fileID: 601592467}
   - {fileID: 645546566}
+  - {fileID: 1912495807}
+  - {fileID: 77219565}

@@ -39,6 +39,10 @@ public class CombatResolver : MonoBehaviour
 
         health.ApplyDamage(damage);
 
+        // Block SFX: punch landed (accuracy>0) but defender was guarding
+        if (isGuarding && accuracyFactor > 0f)
+            AudioManager.Instance?.PlayBlock();
+
         if (!isGuarding && damage >= _stunDamageThreshold)
             defender.EnterStun(_stunDuration);
 

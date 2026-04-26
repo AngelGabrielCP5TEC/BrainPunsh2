@@ -14,9 +14,10 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        // Scene-bound (NOT DontDestroyOnLoad). Match state restarts cleanly on every RING load.
+        // Destroying the *component* (not the GameObject) so siblings like RoundManager/CombatResolver survive.
+        if (Instance != null && Instance != this) { Destroy(this); return; }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
         CurrentState = _startingState;
     }
 
