@@ -5632,7 +5632,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d645eac5a1c6ba429b4871e50e88a77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerFighterInput
-  _mode: 0
+  _mode: 1
   _toggleModeKey: 283
   _guardKey: 304
   _punchKey: 32
@@ -5641,8 +5641,8 @@ MonoBehaviour:
   _mouseSensitivity: 0.05
   _swivelClamp: 1
   _defaultFocus: 0.5
-  _host: 127.0.0.1
-  _port: 12345
+  _host: 10.43.104.190
+  _port: 1234
   _autoReconnect: 1
   _reconnectDelay: 2
 --- !u!4 &1912381238 stripped
@@ -5683,7 +5683,11 @@ MonoBehaviour:
   _ringMusic: {fileID: 8300000, guid: 0b08d2b5409b09c44a37693618bf2e74, type: 3}
   _winMusic: {fileID: 8300000, guid: e3ba6a46a2f25fd45a563a6a6dbf351f, type: 3}
   _loseMusic: {fileID: 8300000, guid: 3a6df552f09f89745b8c2ce88f2b85e6, type: 3}
+  _blockSfx: {fileID: 0}
+  _roundStartSfx: {fileID: 0}
+  _roundEndBellSfx: {fileID: 0}
   _musicVolume: 0.6
+  _sfxVolume: 0.9
   _matchEndDuckVol: 0
   _defaultFadeDuration: 1
   _menuSceneName: MainMenu

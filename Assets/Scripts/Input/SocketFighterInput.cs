@@ -11,7 +11,7 @@ public class SocketFighterInput : MonoBehaviour, IFighterInput
 {
     [Header("Connection")]
     [SerializeField] private string _host = "127.0.0.1";
-    [SerializeField] private int _port = 12345;
+    [SerializeField] private int _port = 1234;
 
     [Header("Debounce (seconds)")]
     [SerializeField] private float _debounceTime = 0.05f;
