@@ -4,46 +4,26 @@ using TMPro;
 
 public class WinMenuController : MonoBehaviour
 {
-    [Header("Win Panel")]
-    [SerializeField] private GameObject _winPanel;
-
-    [Header("UI Elements")]
+    [Header("Win UI")]
     [SerializeField] private TextMeshProUGUI _winText;
     [SerializeField] private TextMeshProUGUI _statsText;
-
-    [Header("Buttons")]
     [SerializeField] private Button _nextRoundButton;
     [SerializeField] private Button _mainMenuButton;
 
     void Start()
     {
+        Time.timeScale = 1f; // Asegurar que el tiempo está corriendo
+
         if (_nextRoundButton != null)
             _nextRoundButton.onClick.AddListener(OnNextRoundClicked);
         if (_mainMenuButton != null)
             _mainMenuButton.onClick.AddListener(OnMainMenuClicked);
 
-        if (_winPanel != null)
-            _winPanel.SetActive(false);
-
-        // Listen to match end event
-        var roundManager = FindObjectOfType<RoundManager>();
-        if (roundManager != null)
-            roundManager.OnMatchEnd += OnMatchEnd;
+        ShowWinScreen();
     }
 
-    private void OnMatchEnd(bool playerWon)
+    private void ShowWinScreen()
     {
-        if (playerWon)
-        {
-            ShowWinMenu();
-        }
-    }
-
-    private void ShowWinMenu()
-    {
-        if (_winPanel != null)
-            _winPanel.SetActive(true);
-
         if (_winText != null)
             _winText.text = "¡VICTORIA!";
 
@@ -54,7 +34,6 @@ public class WinMenuController : MonoBehaviour
                 _statsText.text = $"Rondas Ganadas: {roundManager.PlayerWins}";
         }
 
-        Time.timeScale = 0f;
         Debug.Log("[WinMenu] You won!");
     }
 

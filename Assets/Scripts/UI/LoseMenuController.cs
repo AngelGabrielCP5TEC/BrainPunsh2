@@ -4,46 +4,26 @@ using TMPro;
 
 public class LoseMenuController : MonoBehaviour
 {
-    [Header("Lose Panel")]
-    [SerializeField] private GameObject _losePanel;
-
-    [Header("UI Elements")]
+    [Header("Lose UI")]
     [SerializeField] private TextMeshProUGUI _loseText;
     [SerializeField] private TextMeshProUGUI _statsText;
-
-    [Header("Buttons")]
     [SerializeField] private Button _retryButton;
     [SerializeField] private Button _mainMenuButton;
 
     void Start()
     {
+        Time.timeScale = 1f; // Asegurar que el tiempo está corriendo
+
         if (_retryButton != null)
             _retryButton.onClick.AddListener(OnRetryClicked);
         if (_mainMenuButton != null)
             _mainMenuButton.onClick.AddListener(OnMainMenuClicked);
 
-        if (_losePanel != null)
-            _losePanel.SetActive(false);
-
-        // Listen to match end event
-        var roundManager = FindObjectOfType<RoundManager>();
-        if (roundManager != null)
-            roundManager.OnMatchEnd += OnMatchEnd;
+        ShowLoseScreen();
     }
 
-    private void OnMatchEnd(bool playerWon)
+    private void ShowLoseScreen()
     {
-        if (!playerWon)
-        {
-            ShowLoseMenu();
-        }
-    }
-
-    private void ShowLoseMenu()
-    {
-        if (_losePanel != null)
-            _losePanel.SetActive(true);
-
         if (_loseText != null)
             _loseText.text = "¡DERROTA!";
 
@@ -54,7 +34,6 @@ public class LoseMenuController : MonoBehaviour
                 _statsText.text = $"Rondas Ganadas: {roundManager.PlayerWins}\nRondas Perdidas: {roundManager.BotWins}";
         }
 
-        Time.timeScale = 0f;
         Debug.Log("[LoseMenu] You lost!");
     }
 
