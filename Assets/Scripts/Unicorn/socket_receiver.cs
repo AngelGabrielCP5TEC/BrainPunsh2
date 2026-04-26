@@ -16,7 +16,7 @@ public class SocketReceiver : MonoBehaviour
 
     // Datos recibidos
     public Vector2 Cursor { get; private set; } = Vector2.zero;
-    public int State { get; private set; } = 0;
+    public int Focus { get; private set; } = 0;
     public int Imaginary { get; private set; } = 0;
 
     void Start()
@@ -170,8 +170,14 @@ public class SocketReceiver : MonoBehaviour
             &&
 
             int.TryParse(
-                parts[2],
-                out int state
+                parts[1],
+                System.Globalization.
+                NumberStyles.Float,
+
+                System.Globalization.
+                CultureInfo.InvariantCulture,
+
+                out float focus
             )
 
             &&
@@ -190,12 +196,12 @@ public class SocketReceiver : MonoBehaviour
                         y
                     );
 
-                State = state;
+                Focus = focus;
                 Imaginary = imag;
             }
 
             Debug.Log(
-              $"X:{x} Y:{y} State:{state} MI:{imag}"
+              $"X:{x} Y:{y} Focus:{focus} MI:{imag}"
             );
         }
 
@@ -240,7 +246,7 @@ public class SocketReceiver : MonoBehaviour
     public (
         float,
         float,
-        int,
+        float,
         int
     ) GetReceiverData()
     {
@@ -250,7 +256,7 @@ public class SocketReceiver : MonoBehaviour
             (
                 Cursor.x,
                 Cursor.y,
-                State,
+                Focus,
                 Imaginary
             );
         }

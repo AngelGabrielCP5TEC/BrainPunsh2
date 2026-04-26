@@ -27,6 +27,9 @@ columns    = ['Time', 'FZ', 'CZ', 'PZ']
 total_data = {k: [] for k in columns}
 history    = []
 
+MIN_ENG = 0.2
+MAX_ENG = 1.5
+
 # índices Unicorn
 ax_idx = 8
 ay_idx = 9
@@ -148,6 +151,14 @@ if len(total_data['Time']) >= window_size:
 
             engagement_smooth = np.mean(history)
 
+            engagement_scaled = (engagement_smooth - MIN_ENG) / (MAX_ENG - MIN_ENG)
+            engagement_scaled = max(0, min(1, engagement_scaled))
+
+            engagement_index = int(engagement_scaled * 100)
+
+            # ========= OUTPUT =========
+            print(f"\rEngagement Index: {engagement_index}", end='')
+
             # CLASIFICACIÓN directa sobre el ratio
             
             #STATE ES LO MAS IMPORTANTE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -158,7 +169,7 @@ if len(total_data['Time']) >= window_size:
             else:
                 state = 2
 
-            print(f"\rEngagement: {engagement_smooth:.3f} | Estado: {state}", end='')
+            print(f"\rEngagement: {engagement_smooth:.3f} | Estado: {engagement_index}", end='')
             # quitar bias
             ax=sample[ax_idx]-acc_bias_x
             ay=sample[ay_idx]-acc_bias_y
@@ -208,7 +219,7 @@ if len(total_data['Time']) >= window_size:
             print(f"Vector: {vector}")
 
             TCP_server.vector=vector
-            TCP_server.state_vector=estado
+            TCP_server.focus=engagement_index
             
             # debug opcional
             print(vector)

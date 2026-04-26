@@ -8,7 +8,7 @@ PORT = 12345
 SEND_RATE_HZ = 25   # 40 ms por paquete
 
 vector = [0.0, 0.0]       # [x, y]
-state_vector = [0]        # [state]
+focus = 0.0  # nivel de concentración flotante
 imaginary = 0             # 0,1,2
 
 data_lock = threading.Lock()
@@ -45,15 +45,15 @@ def run():
             with data_lock:
                 x = vector[0]
                 y = vector[1]
-                state = state_vector[0]
+                foc = focus
                 imag = imaginary
 
             # Formato:
-            # x,y,state,imaginary
+            # x,y,focus,imaginary
             message = (
                 f"{x:.4f},"
                 f"{y:.4f},"
-                f"{state},"
+                f"{foc},"
                 f"{imag}\n"
             )
 
