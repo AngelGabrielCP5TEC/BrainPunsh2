@@ -7,8 +7,13 @@ PORT = 12345
 
 SEND_RATE_HZ = 25 #1 paquete cada 40ms, hay que ver si lo adaptamos a más o menos
 
+<<<<<<< Updated upstream
 #Variables compartidas con los otros scripts
 vector = [0.0, 0.0] #vector para x e y
+=======
+# [x, y, engagement_index, state_erd]
+vector = [0.0, 0.0, 0.0, 0]
+>>>>>>> Stashed changes
 
 concentracion = 0.0
 
@@ -38,8 +43,32 @@ def run(): #corremos el servidor en un hilo aparte para no bloquear el resto del
             message = f"{x:.2f},{y:.2f},{concentracion:.2f}\n"
             conn.sendall(message.encode("utf-8")) #enviamos el mensaje al cliente (Unity) como bytes UTF-8 (8 bit Unicode Tranformation Format)
 
+<<<<<<< Updated upstream
             print(f"[TCP] enviado: {message.strip()}")
             time.sleep(sleep_time) #esperamos antes de enviar el siguiente paquete
+=======
+            try:
+                while True:
+                    with data_lock:
+                        x      = vector[0]
+                        y      = vector[1]
+                        foc    = vector[2]
+                        imag   = vector[3]
+
+                    # Format: x,y,engagement_index,state_erd\n
+                    message = f"{x:.4f},{y:.4f},{foc:.4f},{int(imag)}\n"
+                    conn.sendall(message.encode("utf-8"))
+                    time.sleep(sleep_time)
+
+            except (BrokenPipeError, ConnectionResetError, OSError) as e:
+                _log(f"Cliente desconectado ({e}). Esperando nueva conexión...")
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            # back to outer loop: accept() again
+>>>>>>> Stashed changes
 
     except (BrokenPipeError, ConnectionResetError):
                 print("[TCP] valió madres la conexión gracias bai.")

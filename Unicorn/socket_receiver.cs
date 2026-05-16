@@ -17,8 +17,16 @@ public class SocketReceiver : MonoBehaviour //monobehaviour es la clase base de 
     private readonly object dataLock = new object();
     private string lastReceivedData = ""; //ultimo data recibido
 
+<<<<<<< Updated upstream
     private  readonly object dataLock = new object();
     private string lastReceivedData = ""; //ultimo data recibido
+=======
+    // Datos recibidos
+    // Format received: x,y,engagement_index,state_erd\n
+    public Vector2 Cursor      { get; private set; } = Vector2.zero;
+    public float   Focus       { get; private set; } = 0f;   // engagement_index [0-100]
+    public int     Imaginary   { get; private set; } = 0;    // state_erd: 0=none, 1=left, 2=right
+>>>>>>> Stashed changes
 
     //propiedades públicas
     public float Concentration { get; private set; } = 0.0f; //propiedad para concentración, solo lectura desde fuera
@@ -113,9 +121,27 @@ public class SocketReceiver : MonoBehaviour //monobehaviour es la clase base de 
             float.TryParse(parts[2], System.Globalization.NumberStyles.Float,
                            System.Globalization.CultureInfo.InvariantCulture, out float conc)))
         {
+<<<<<<< Updated upstream
             X = x;
             Y = y;
             Concentration = conc;
+=======
+            lock(dataLock)
+            {
+                Cursor =
+                    new Vector2(
+                        x,
+                        y
+                    );
+
+                Focus     = focus;
+                Imaginary = imag;
+            }
+
+            Debug.Log(
+              $"X:{x} Y:{y} Engagement:{focus} MI:{imag}"
+            );
+>>>>>>> Stashed changes
         }
         else
         {
@@ -147,3 +173,31 @@ public class SocketReceiver : MonoBehaviour //monobehaviour es la clase base de 
         }
 
 
+<<<<<<< Updated upstream
+=======
+        Debug.Log(
+            "Conexión cerrada."
+        );
+    }
+
+    // Returns (x, y, engagement_index, state_erd)
+    public (
+        float,
+        float,
+        float,
+        int
+    ) GetReceiverData()
+    {
+        lock(dataLock)
+        {
+            return
+            (
+                Cursor.x,
+                Cursor.y,
+                Focus,
+                Imaginary
+            );
+        }
+    }
+}
+>>>>>>> Stashed changes
