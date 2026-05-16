@@ -21,8 +21,6 @@ public class SocketFighterInput : MonoBehaviour, IFighterInput
     [SerializeField] private int    _port = 1234;
 >>>>>>> Stashed changes
 
-    [Header("Debounce (seconds)")]
-    [SerializeField] private float _debounceTime = 0.05f;
     [Header("Swivel Clamp")]
     [SerializeField] private float _swivelClamp = 1f;
 
