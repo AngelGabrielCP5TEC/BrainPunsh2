@@ -4,65 +4,83 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 
-// Current format: "focus_index,jaw\n"  (int 0-100, int 0/1)
-// Expand ParseLine() once the real Unicorn socket protocol is confirmed.
-// Future fields to add: left_binary, right_binary, ax, ay, az, gx, gy, gz, focus[]
+// Simple socket-only fallback input for IFighterInput.
+// Use PlayerFighterInput for keyboard fallback, mode switching, and auto-reconnect.
+//
+// Protocol: "x,y,focus,imaginary\n"  at ~25 Hz  (sent by TCP_server.py)
+//   x, y      — swivel cursor in [-1, 1]
+//   focus     — engagement index 0..100  (mapped to Focus01 = focus / 100)
+//   imaginary — motor imagery state: 0 idle | 1 guard | 2 punch
 public class SocketFighterInput : MonoBehaviour, IFighterInput
 {
     [Header("Connection")]
     [SerializeField] private string _host = "127.0.0.1";
-    [SerializeField] private int _port = 1234;
+    [SerializeField] private int    _port = 1234;
 
-    [Header("Debounce (seconds)")]
-    [SerializeField] private float _debounceTime = 0.05f;
+    [Header("Swivel Clamp")]
+    [SerializeField] private float _swivelClamp = 1f;
 
-    // IFighterInput — populated each Update() from thread-safe raw values
-    public bool GuardHeld { get; private set; }
-    public bool PunchHeld { get; private set; }
-    public bool PunchReleasedThisFrame { get; private set; }
-    public float Focus01 { get; private set; }
-    public Vector2 RawSwivel { get; private set; }  // populated once IMU arrives in socket
+    // ── IFighterInput ────────────────────────────────────────────────
+    public bool    GuardHeld              { get; private set; }
+    public bool    PunchHeld              { get; private set; }
+    public bool    PunchReleasedThisFrame { get; private set; }
+    public float   Focus01                { get; private set; }
+    public Vector2 RawSwivel              { get; private set; }
 
-    // Thread-shared state
+    // ── Thread-safe raw values ───────────────────────────────────────
     private readonly object _lock = new object();
-    private int _rawFocus;
-    private int _rawJaw;
+    private float _sockX, _sockY, _sockFocus;
+    private int   _sockImagery;
+    private bool  _hasData;
 
-    // Debounce
-    private bool _punchDebounced;
-    private float _punchDebounceTimer;
-    private bool _prevPunchHeld;
-
-    private TcpClient _client;
+    // ── Socket ───────────────────────────────────────────────────────
+    private TcpClient     _client;
     private NetworkStream _stream;
-    private Thread _receiveThread;
+    private Thread        _rxThread;
     private volatile bool _isRunning;
 
-    void Start() => Connect();
+    // ── Punch edge detection ─────────────────────────────────────────
+    private bool _prevPunchHeld;
+
+    // ────────────────────────────────────────────────────────────────
+
+    void Start()  => Connect();
+
+    void OnApplicationQuit() => Disconnect();
 
     void Update()
     {
-        int focus, jaw;
-        lock (_lock) { focus = _rawFocus; jaw = _rawJaw; }
+        if (!_hasData) return;
+
+        float x, y, focus;
+        int   imagery;
+
+        lock (_lock)
+        {
+            x       = _sockX;
+            y       = _sockY;
+            focus   = _sockFocus;
+            imagery = _sockImagery;
+        }
+
+        RawSwivel = new Vector2(
+            Mathf.Clamp(x, -_swivelClamp, _swivelClamp),
+            Mathf.Clamp(y, -_swivelClamp, _swivelClamp));
 
         Focus01 = Mathf.Clamp01(focus / 100f);
 
-        // TODO: split jaw into left_binary (guard) and right_binary (punch)
-        // when the real socket sends separate channels.
-        // For now, jaw drives punch only.
-        UpdateDebounce(jaw == 1, ref _punchDebounced, ref _punchDebounceTimer);
-        PunchReleasedThisFrame = _prevPunchHeld && !_punchDebounced;
-        _prevPunchHeld = _punchDebounced;
-        PunchHeld = _punchDebounced;
-        GuardHeld = false;  // placeholder until left_binary channel arrives
+        // imaginary: 0 = idle | 1 = guard | 2 = punch
+        bool newPunch = (imagery == 2);
+        bool newGuard = (imagery == 1);
+
+        PunchReleasedThisFrame = _prevPunchHeld && !newPunch;
+        _prevPunchHeld = newPunch;
+
+        PunchHeld = newPunch;
+        GuardHeld = newGuard;
     }
 
-    private void UpdateDebounce(bool raw, ref bool state, ref float timer)
-    {
-        if (raw) timer = _debounceTime;
-        else timer -= Time.deltaTime;
-        state = timer > 0f;
-    }
+    // ── Socket lifecycle ─────────────────────────────────────────────
 
     private void Connect()
     {
@@ -71,20 +89,35 @@ public class SocketFighterInput : MonoBehaviour, IFighterInput
             _client = new TcpClient(_host, _port);
             _stream = _client.GetStream();
             _isRunning = true;
-            _receiveThread = new Thread(ReceiveLoop) { IsBackground = true };
-            _receiveThread.Start();
-            Debug.Log("[Socket] Connected.");
+
+            _rxThread = new Thread(ReceiveLoop) { IsBackground = true };
+            _rxThread.Start();
+
+            Debug.Log($"[SocketFighterInput] Connected to {_host}:{_port}.");
         }
         catch (Exception e)
         {
-            Debug.LogWarning($"[Socket] Could not connect: {e.Message}");
+            Debug.LogWarning($"[SocketFighterInput] Could not connect: {e.Message}");
         }
     }
 
+    private void Disconnect()
+    {
+        _isRunning = false;
+        _rxThread?.Join(300);
+
+        try { _stream?.Close(); } catch { }
+        try { _client?.Close(); } catch { }
+
+        Debug.Log("[SocketFighterInput] Disconnected.");
+    }
+
+    // ── Receive loop (background thread) ────────────────────────────
+
     private void ReceiveLoop()
     {
-        var buffer = new byte[1024];
-        var partial = new StringBuilder();
+        var buffer   = new byte[1024];
+        var leftover = new StringBuilder();
 
         while (_isRunning)
         {
@@ -93,9 +126,9 @@ public class SocketFighterInput : MonoBehaviour, IFighterInput
                 if (_stream != null && _stream.DataAvailable)
                 {
                     int n = _stream.Read(buffer, 0, buffer.Length);
-                    if (n > 0) partial.Append(Encoding.UTF8.GetString(buffer, 0, n));
+                    if (n > 0) leftover.Append(Encoding.UTF8.GetString(buffer, 0, n));
 
-                    string s = partial.ToString();
+                    string s = leftover.ToString();
                     int nl;
                     while ((nl = s.IndexOf('\n')) >= 0)
                     {
@@ -103,36 +136,45 @@ public class SocketFighterInput : MonoBehaviour, IFighterInput
                         s = s.Substring(nl + 1);
                         if (!string.IsNullOrEmpty(line)) ParseLine(line);
                     }
-                    partial.Clear();
-                    partial.Append(s);
+                    leftover.Clear();
+                    leftover.Append(s);
                 }
+
                 Thread.Sleep(10);
             }
             catch (Exception e)
             {
-                Debug.LogError($"[Socket] Receive error: {e.Message}");
+                Debug.LogError($"[SocketFighterInput] Receive error: {e.Message}");
                 break;
             }
         }
     }
 
+    // ── Parser ───────────────────────────────────────────────────────
+
+    // Expected: "x,y,focus,imaginary"
+    // Backwards-compatible: ignores extra fields, skips if fewer than 4.
     private void ParseLine(string line)
     {
-        // Format: "focus_index,jaw"
         var parts = line.Split(',');
-        if (parts.Length < 2) return;
-        if (int.TryParse(parts[0], out int f) && int.TryParse(parts[1], out int j))
-            lock (_lock) { _rawFocus = f; _rawJaw = j; }
-    }
+        if (parts.Length < 4) return;
 
-    void OnApplicationQuit() => Disconnect();
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var fs  = System.Globalization.NumberStyles.Float;
 
-    private void Disconnect()
-    {
-        _isRunning = false;
-        _receiveThread?.Join(200);
-        try { _stream?.Close(); } catch { }
-        try { _client?.Close(); } catch { }
-        Debug.Log("[Socket] Disconnected.");
+        if (!float.TryParse(parts[0], fs, inv, out float x))       return;
+        if (!float.TryParse(parts[1], fs, inv, out float y))       return;
+        if (!float.TryParse(parts[2], fs, inv, out float focus))   return;
+        if (!int.TryParse  (parts[3].Trim(), out int imagery))     return;
+
+        lock (_lock)
+        {
+            _sockX       = x;
+            _sockY       = y;
+            _sockFocus   = focus;
+            _sockImagery = imagery;
+        }
+
+        _hasData = true;
     }
 }

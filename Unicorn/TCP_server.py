@@ -9,9 +9,8 @@ PORT = 1234
 
 SEND_RATE_HZ = 25   # 40 ms por paquete
 
-vector = [0.0, 0.0]       # [x, y]
-focus = 0.0  # nivel de concentración flotante
-imaginary = 0             # 0,1,2
+# [x, y, engagement_index, state_erd]
+vector = [0.0, 0.0, 0.0, 0]
 
 data_lock = threading.Lock()
 
@@ -49,13 +48,13 @@ def run():
             try:
                 while True:
                     with data_lock:
-                        x = vector[0]
-                        y = vector[1]
-                        foc = focus
-                        imag = imaginary
+                        x      = vector[0]
+                        y      = vector[1]
+                        foc    = vector[2]
+                        imag   = vector[3]
 
-                    # Format: x,y,focus,imaginary\n
-                    message = f"{x:.4f},{y:.4f},{foc},{imag}\n"
+                    # Format: x,y,engagement_index,state_erd\n
+                    message = f"{x:.4f},{y:.4f},{foc:.4f},{int(imag)}\n"
                     conn.sendall(message.encode("utf-8"))
                     time.sleep(sleep_time)
 

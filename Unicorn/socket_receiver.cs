@@ -15,9 +15,10 @@ public class SocketReceiver : MonoBehaviour
     private readonly object dataLock = new object();
 
     // Datos recibidos
-    public Vector2 Cursor { get; private set; } = Vector2.zero;
-    public float Focus { get; private set; } = 0f;
-    public int Imaginary { get; private set; } = 0;
+    // Format received: x,y,engagement_index,state_erd\n
+    public Vector2 Cursor      { get; private set; } = Vector2.zero;
+    public float   Focus       { get; private set; } = 0f;   // engagement_index [0-100]
+    public int     Imaginary   { get; private set; } = 0;    // state_erd: 0=none, 1=left, 2=right
 
     void Start()
     {
@@ -67,6 +68,7 @@ public class SocketReceiver : MonoBehaviour
             );
         }
     }
+
     void ReceiveData()
     {
         byte[] buffer = new byte[1024];
@@ -196,12 +198,12 @@ public class SocketReceiver : MonoBehaviour
                         y
                     );
 
-                Focus = focus;
+                Focus     = focus;
                 Imaginary = imag;
             }
 
             Debug.Log(
-              $"X:{x} Y:{y} Focus:{focus} MI:{imag}"
+              $"X:{x} Y:{y} Engagement:{focus} MI:{imag}"
             );
         }
 
@@ -243,12 +245,13 @@ public class SocketReceiver : MonoBehaviour
         );
     }
 
+    // Returns (x, y, engagement_index, state_erd)
     public (
         float,
         float,
         float,
         int
-    ) GetReceiverData() // returns (x, y, focus, imaginary)
+    ) GetReceiverData()
     {
         lock(dataLock)
         {

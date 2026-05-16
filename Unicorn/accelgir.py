@@ -8,6 +8,8 @@ from collections import deque
 import pandas as pd
 from scipy.signal import iirnotch
 import threading
+import random
+import time
 
 
 
@@ -100,59 +102,74 @@ def load_calibration_from_csv(path, fs, b_n, a_n, b_b, a_b):
     return ref_c3, ref_c4
 
 class BCIClassifier:
-    """Hysteretic 3-class classifier: 0 idle | 1 punch | 2 guard.
+    def __init__(self, threshold=0.05):
+        self.threshold = threshold
 
-    Bias toward idle: high bar to enter punch/guard, low bar to fall back.
-    Without this, two-class motor imagery oscillates because most subjects
-    have a slight resting C3/C4 asymmetry that's never exactly zero.
+        self.mode = "detect"   # detect, hold_motor, hold_idle
+        self.current_state = 0
+        self.until_time = 0
 
-    enter_threshold — |score| must exceed this to commit to PUNCH/GUARD.
-    exit_threshold  — once committed, |score| dropping below this returns
-                      to IDLE. Should be smaller than enter_threshold.
-    """
-
-    def __init__(self, enter_threshold=2.80, exit_threshold=0.05):
-        self.enter_threshold = enter_threshold
-        self.exit_threshold  = exit_threshold
         self.last_raw_state = 0
-        self.stable_state = 0
         self.counter = 0
 
-    def classify(self, erd_c3, erd_c4):
+    def detect_raw_state(self, erd_c3, erd_c4):
         if np.isnan(erd_c3) or np.isnan(erd_c4):
-            current = 0
-        else:
-            score = erd_c4 - erd_c3
-            
-            print(f"score={score:+.3f}")
+            return 0, np.nan
 
-            if self.stable_state == 0:
-                # Currently idle: only commit on strong asymmetry
-                if score < -self.enter_threshold:
-                    current = 1
-                elif score > self.enter_threshold:
-                    current = 2
-                else:
-                    current = 0
+        score = (erd_c4 - erd_c3) / (abs(erd_c4) + abs(erd_c3) + 1e-6)
+        LEFT_THRESHOLD = 0.08
+        RIGHT_THRESHOLD = 0.04
+
+        if score < -LEFT_THRESHOLD:
+            return 1, score
+        elif score > RIGHT_THRESHOLD:
+            return 2, score
+        else:
+            return 0, score
+
+    def classify(self, erd_c3, erd_c4):
+        now = time.time()
+
+        # 1) Si estoy manteniendo 1 o 2, lo repito hasta que acabe el tiempo
+        if self.mode == "hold_motor":
+            if now < self.until_time:
+                print(f"motor: {self.current_state}", flush=True)
+                return self.current_state
             else:
-                # Currently punch/guard: fall back to idle when |score| weakens
-                if abs(score) < self.exit_threshold:
-                    current = 0
-                elif score < 0:
-                    current = 1
-                else:
-                    current = 2
+                self.mode = "hold_idle"
+                self.current_state = 0
+                self.until_time = now + random.uniform(1.0, 3.0)
 
-        # Debounce: stable_state updates only after DEBOUNCE_COUNT consecutive matches
-        if current == self.last_raw_state:
+        # 2) Si estoy en idle, mando 0 hasta que acabe el tiempo
+        if self.mode == "hold_idle":
+            if now < self.until_time:
+                print("motor: 0", flush=True)
+                return 0  
+            else:
+                self.mode = "detect"
+
+        # 3) Solo aquí vuelvo a detectar ERD
+        raw_state, score = self.detect_raw_state(erd_c3, erd_c4)
+
+        # Debounce
+        if raw_state == self.last_raw_state:
             self.counter += 1
-            if self.counter >= DEBOUNCE_COUNT:
-                self.stable_state = current
         else:
-            self.last_raw_state = current
+            self.last_raw_state = raw_state
             self.counter = 1
 
-        return self.stable_state
+        # Solo entra a 1 o 2 si se repitió suficientes veces
+        if self.counter >= DEBOUNCE_COUNT and raw_state in [1, 2]:
+            self.current_state = raw_state
+            self.mode = "hold_motor"
+            self.until_time = now + random.uniform(1.0, 3.0)
+
+            print(f"score: {score:.4f} | motor: {self.current_state}", flush=True)
+            return self.current_state
+
+        # Si aún no detecta algo estable, se queda en 0
+        print(f"score: {score:.4f} | motor: 0", flush=True)
+        return 0
         
 
 
@@ -264,19 +281,12 @@ y_prev=0.0
 alpha=0.8
 
 # -------- pesos fusion sensor ----------
-w_acc=0.7
-w_gyro=0.3
+w_acc=0.6
+w_gyro=0.4
 
 # Inicialización para ERD
 CALIBRATION_CSV = os.path.join(BASE_DIR, "raw_baseline_data.csv") #LYON, CORRIGE ESTO
-
-# Hysteresis thresholds for the punch/guard classifier.
-#   ERD_ENTER — |score| must exceed this to commit to PUNCH/GUARD (high bar).
-#   ERD_EXIT  — |score| dropping below this returns the subject to IDLE.
-# Tune up/down per subject. Subject feels too "twitchy"? Raise ERD_ENTER.
-# Subject can't ever leave a state? Raise ERD_EXIT (closer to ERD_ENTER).
-ERD_ENTER = 0.30
-ERD_EXIT  = 0.10
+ERD_THRESHOLD = 0.05
 
 b_n, a_n, b_b, a_b = build_filters(fs)
 
@@ -287,19 +297,10 @@ ref_c3, ref_c4 = load_calibration_from_csv(
 buffer_c3 = deque(maxlen=window_size)
 buffer_c4 = deque(maxlen=window_size)
 
-erd_classifier = BCIClassifier(enter_threshold=ERD_ENTER, exit_threshold=ERD_EXIT)
+erd_classifier = BCIClassifier(threshold=ERD_THRESHOLD)
 
 sample_counter = 0
-STEP_SIZE = 125  # 125 samples @ 250 Hz = 0.5 s — ERD recompute interval
-
-# Persisted motor-imagination state. Updated every STEP_SIZE samples (~0.5 s)
-# and sent on EVERY TCP packet (~25 Hz) so Unity sees a steady value.
-last_state_erd = 0
-
-# Print throttle: only print the per-frame "what Unity sees" line every N iterations
-# so the terminal stays readable. 25 = ~10 Hz at fs=250.
-PRINT_EVERY = 25
-_print_counter = 0
+STEP_SIZE = 25
 
 while True:
 
@@ -343,11 +344,27 @@ while True:
             engagement_scaled = (engagement_smooth - MIN_ENG) / (MAX_ENG - MIN_ENG)
             engagement_scaled = max(0, min(1, engagement_scaled))
 
-            engagement_index = int(engagement_scaled * 100)
+            engagement_index = int(engagement_scaled * 100)*0.1
 
+            # ========= OUTPUT =========
+            print(f"\rEngagement Index: {engagement_index}", end='')
 
-            # MOTOR IMAGINATION: recompute ERD/ERS every STEP_SIZE samples (~0.5 s).
-            # Between recomputes, last_state_erd persists and is sent on every packet.
+            # CLASIFICACIÓN directa sobre el ratio
+            
+            #STATE ES LO MAS IMPORTANTE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            #if engagement_smooth < 0.5:
+            #    state = 0
+            #elif engagement_smooth < 1.2:
+            #    state = 1
+            #else:
+            #    state = 2
+
+            
+
+            #MOTOR IMAGINATION: cálculo de ERD/ERS cada 0.1 s
+            # 2) ERD C3/C4
+            state_erd = erd_classifier.current_state
+
             if len(buffer_c3) == window_size and sample_counter >= STEP_SIZE:
                 sample_counter = 0
 
@@ -357,13 +374,9 @@ while True:
                 erd_c3 = compute_erd(p_c3, ref_c3)
                 erd_c4 = compute_erd(p_c4, ref_c4)
 
-                new_state = erd_classifier.classify(erd_c3, erd_c4)
-                if new_state != last_state_erd:
-                    print(f"\n[ERD] state {last_state_erd} -> {new_state}", flush=True)
-                last_state_erd = new_state
-
-            state_erd = last_state_erd
-
+                state_erd = erd_classifier.classify(erd_c3, erd_c4)
+            else:
+                state_erd = erd_classifier.current_state
 
 
 
@@ -401,8 +414,8 @@ while True:
             )
 
             # fusion sensores
-            x=(w_acc*x_acc)+(w_gyro*x_gyro)
-            y=(w_acc*y_acc)+(w_gyro*y_gyro)
+            x=(w_acc*x_acc)+(w_gyro*x_gyro)*0.3
+            y=(w_acc*y_acc)+(w_gyro*y_gyro)*0.3
 
             # suavizado exponencial
             x=alpha*x_prev+(1-alpha)*x
@@ -411,23 +424,20 @@ while True:
             x_prev=x
             y_prev=y
 
-            vector=[float(x),float(y)]
+            #vector=[float(x),float(y)]
+            #print(f"| Vector: {vector}<")
 
-            TCP_server.vector=vector
-            TCP_server.focus=engagement_index
-            TCP_server.imaginary=int(state_erd)
+            #TCP_server.vector=vector
+            #TCP_server.focus=engagement_index
+            #TCP_server.imaginary=int(state_erd)
 
-            # ── Show exactly what Unity is receiving ─────────────────
-            # Format mirrors the TCP packet: "x,y,focus,imaginary"
-            # Throttled to ~10 Hz; \r keeps it on a single line so ERD
-            # transitions and bind/connect logs stay readable above.
-            _print_counter += 1
-            if _print_counter >= PRINT_EVERY:
-                _print_counter = 0
-                imag_label = {0: "idle ", 1: "PUNCH", 2: "GUARD"}.get(int(state_erd), "?    ")
-                print(
-                    f"\r[->Unity] x={x:+.4f}  y={y:+.4f}  "
-                    f"focus={engagement_index:3d}/100  "
-                    f"imag={int(state_erd)} ({imag_label})   ",
-                    end="", flush=True,
-                )
+            full_vector = [
+                float(x),
+                float(y),
+                float(engagement_index),
+                float(state_erd)
+            ]
+
+            print(f"| Full Vector: {full_vector}<")
+
+            TCP_server.vector = full_vector
